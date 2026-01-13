@@ -1,0 +1,8 @@
+.venv
+data/
+models/
+*.csv
+*.xlsx
+*.pkl
+*.cbm
+.ipynb_checkpoints/
