@@ -66,12 +66,19 @@
 
 ## Структура проекта
 data/
+
    telco_churn.csv
+
 notebooks/
+
    cat_boost_info/
+
    01_eda_baseline_catboost.ipynb
+
 requirements.txt
+
 README.md
+
 
 ## Вывод
 
