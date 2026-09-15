@@ -27,12 +27,12 @@ A **stratified 60/20/20 train / validation / test split**, fixed seed (`random_s
 | Split | Role |
 |---|---|
 | Train (n=4,225) | Fit both models; CatBoost's final calibration is also fit here (see below) |
-| Validation (n=1,409) | CatBoost early stopping (`eval_set`) and hyperparameter/class-weighting selection — used **exactly once**, for that purpose — plus post-hoc model-comparison diagnostics |
+| Validation (n=1,409) | Model selection and diagnostics: CatBoost early stopping (`eval_set`), hyperparameter/class-weighting selection, and post-hoc model-comparison diagnostics |
 | Test (n=1,409) | Opened once, in `03_final_test_evaluation.ipynb`, purely for final reporting and diagnostics |
 
 Test is **never** used as CatBoost's `eval_set`, **never** used to pick a threshold, **never** used for model selection, and **never** used to fit calibration. All preprocessing (`StandardScaler`, `OneHotEncoder`) is fit on train only, inside an sklearn `Pipeline`.
 
-**Calibration does not reuse the validation labels used for model selection.** After hyperparameters (including the early-stopped iteration count) are frozen, CatBoost's probability calibration is fit by 5-fold cross-validation **on train only**: each fold trains a fresh model on the other folds and predicts on its held-out fold, producing out-of-fold probabilities; a sigmoid map is fit on those OOF probabilities vs. true labels; the final model is refit once on all of train. Validation is then used only to *evaluate* (never fit) the calibration, as a diagnostic — see `src/modeling.py::TrainCVCalibratedCatBoost`.
+**Validation is used for model selection and diagnostics. CatBoost hyperparameters and the early-stopped iteration count are selected using train fit + validation `eval_set`. Probability calibration is fit exclusively from out-of-fold predictions generated within the training set — never from validation. The test set remains fully held out until final evaluation.** Concretely: after hyperparameters (including the early-stopped iteration count) are frozen, CatBoost's probability calibration is fit by 5-fold cross-validation **on train only**: each fold trains a fresh model on the other folds and predicts on its held-out fold, producing out-of-fold predictions; a sigmoid map is fit on those out-of-fold predictions vs. true training labels; the final model is refit once on all of train. Validation is used afterward only to *evaluate* (never fit) that calibration, as a diagnostic — see `src/modeling.py::TrainCVCalibratedCatBoost`.
 
 > The original version of this project fit CatBoost with `eval_set=test_pool` and selected its decision threshold by scanning F1 **on the test set** — both are textbook train/test leakage. An intermediate revision fixed the test leakage but calibrated CatBoost on the same validation labels also used for model comparison — a milder double-use of data. Both issues are fixed in this version (see Section 12).
 
@@ -118,7 +118,9 @@ A max-F1 threshold (validation, diagnostic only) lands at 0.390 — a very diffe
 | Campaign cost | $18,800 |
 | Expected value preserved | $59,940 |
 | **Expected net value** | **$41,140** |
-| Expected ROI | 2.19x |
+| Expected ROI (= net value / cost) | 2.19x |
+
+ROI here is defined as **expected net value ÷ campaign cost**: `41,140 / 18,800 ≈ 2.19x`. For reference, the separate **value-to-cost ratio** (expected value preserved ÷ campaign cost, before subtracting cost) is `59,940 / 18,800 ≈ 3.19x` — a different, larger number that should not be called ROI.
 
 ### Sensitivity analysis
 
