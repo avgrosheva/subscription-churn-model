@@ -1,0 +1,14 @@
+,0
+threshold,0.1388888888888889
+policy,target p >= threshold
+cost_per_contact,25.0
+value_per_retained,600.0
+success_rate,0.3
+n_contacted,752
+pct_contacted,53.371185237757274
+true_churners_reached,333
+expected_retained,99.89999999999999
+cost,18800.0
+expected_value_preserved,59939.99999999999
+net_value,41139.99999999999
+roi,2.188297872340425

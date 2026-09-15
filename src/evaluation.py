@@ -104,37 +104,57 @@ def segment_report(
     df: pd.DataFrame,
     segment_col: str,
     y_true_col: str,
-    y_proba_col: str,
-    threshold: float,
+    targeted_col: str,
+    policy_name: str,
 ) -> pd.DataFrame:
     """Churn rate, targeting share, and recall broken out by a single segment column.
 
-    Segments are purely descriptive/correlational cuts of the test set; they
-    are not causal claims about what drives churn within a segment.
+    `targeted_col` is a precomputed boolean column (0/1) saying whether each
+    customer would be contacted under a specific, named policy
+    (`policy_name`) -- e.g. proba >= 0.5, proba >= the analytical break-even
+    threshold, or membership in a Top-K% risk list. Every row reports the
+    absolute churner count and the absolute captured count alongside the
+    recall rate, so a "0% recall" headline is never shown without its
+    denominator, and the policy it refers to is always explicit.
+
+    Segments are purely descriptive/correlational cuts of the data; they are
+    not causal claims about what drives churn within a segment.
     """
     rows = []
     for segment_value, group in df.groupby(segment_col, observed=True):
         y_true = group[y_true_col].to_numpy()
-        y_proba = group[y_proba_col].to_numpy()
-        y_pred = (y_proba >= threshold).astype(int)
+        y_pred = group[targeted_col].to_numpy().astype(int)
         n = len(group)
         n_churners = int(y_true.sum())
         n_targeted = int(y_pred.sum())
-        recall = recall_score(y_true, y_pred, zero_division=0) if n_churners > 0 else np.nan
-        precision = precision_score(y_true, y_pred, zero_division=0) if n_targeted > 0 else np.nan
+        n_churners_captured = int((y_true & y_pred).sum())
+        recall = (n_churners_captured / n_churners) if n_churners > 0 else np.nan
+        precision = (n_churners_captured / n_targeted) if n_targeted > 0 else np.nan
         rows.append(
             {
                 segment_col: segment_value,
+                "policy": policy_name,
                 "n_customers": n,
+                "n_churners": n_churners,
                 "churn_rate": y_true.mean(),
-                "share_of_test_set": n / len(df),
+                "share_of_data": n / len(df),
                 "n_targeted": n_targeted,
                 "share_targeted_within_segment": n_targeted / n,
+                "n_churners_captured": n_churners_captured,
                 "recall_within_segment": recall,
                 "precision_within_segment": precision,
             }
         )
     return pd.DataFrame(rows).sort_values("churn_rate", ascending=False).reset_index(drop=True)
+
+
+def full_comparison_row(y_true, y_proba, threshold: float) -> dict:
+    """Classification + ranking-adjacent + calibration metrics in one row, for
+    a head-to-head model comparison that goes beyond ROC-AUC/F1.
+    """
+    row = classification_report_dict(y_true, y_proba, threshold)
+    row.update(calibration_summary(y_true, y_proba))
+    return row
 
 
 def random_targeting_table(y_true, k_fractions=(0.05, 0.10, 0.20)) -> pd.DataFrame:
