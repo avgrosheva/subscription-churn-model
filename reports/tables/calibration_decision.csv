@@ -1,0 +1,6 @@
+,0
+brier_before,0.16591757276900546
+brier_after,0.1376145059772262
+log_loss_before,0.49179781137163925
+log_loss_after,0.4263697771693577
+use_calibrated,True

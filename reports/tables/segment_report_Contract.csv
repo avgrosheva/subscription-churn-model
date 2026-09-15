@@ -1,0 +1,4 @@
+Contract,n_customers,churn_rate,share_of_test_set,n_targeted,share_targeted_within_segment,recall_within_segment,precision_within_segment
+Month-to-month,773,0.425614489003881,0.5486160397444997,326,0.4217335058214748,0.6443768996960486,0.6503067484662577
+One year,300,0.12,0.21291696238466998,0,0.0,0.0,
+Two year,336,0.026785714285714284,0.23846699787083037,0,0.0,0.0,
